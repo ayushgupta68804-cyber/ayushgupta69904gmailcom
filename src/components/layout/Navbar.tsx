@@ -1,11 +1,33 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { Sparkles, Menu, X, LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
@@ -17,7 +39,7 @@ const Navbar = () => {
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="font-display text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
-              AayushEventApp
+              The Dreamers Event
             </span>
           </Link>
 
@@ -39,12 +61,26 @@ const Navbar = () => {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" onClick={() => navigate("/auth/login")}>
-              Login
-            </Button>
-            <Button variant="gold" onClick={() => navigate("/auth/signup")}>
-              Get Started
-            </Button>
+            {user ? (
+              <>
+                <Button variant="ghost" onClick={() => navigate("/dashboard")}>
+                  Dashboard
+                </Button>
+                <Button variant="outline" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => navigate("/auth/login")}>
+                  Login
+                </Button>
+                <Button variant="gold" onClick={() => navigate("/auth/signup")}>
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -89,12 +125,26 @@ const Navbar = () => {
                 About
               </Link>
               <div className="flex flex-col gap-2 pt-4 border-t border-border/50">
-                <Button variant="outline" onClick={() => { navigate("/auth/login"); setIsOpen(false); }}>
-                  Login
-                </Button>
-                <Button variant="gold" onClick={() => { navigate("/auth/signup"); setIsOpen(false); }}>
-                  Get Started
-                </Button>
+                {user ? (
+                  <>
+                    <Button variant="outline" onClick={() => { navigate("/dashboard"); setIsOpen(false); }}>
+                      Dashboard
+                    </Button>
+                    <Button variant="ghost" onClick={() => { handleLogout(); setIsOpen(false); }}>
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => { navigate("/auth/login"); setIsOpen(false); }}>
+                      Login
+                    </Button>
+                    <Button variant="gold" onClick={() => { navigate("/auth/signup"); setIsOpen(false); }}>
+                      Get Started
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
