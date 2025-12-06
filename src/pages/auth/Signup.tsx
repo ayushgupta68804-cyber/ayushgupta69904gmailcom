@@ -60,7 +60,7 @@ const Signup = () => {
       setIsLoading(false);
       toast({
         title: "Account Created",
-        description: "Welcome to Toshan Event! Let's plan something amazing.",
+        description: "Welcome to AayushEventApp! Let's plan something amazing.",
       });
       navigate(role === "owner" ? "/admin" : "/dashboard");
     }, 1500);
@@ -81,7 +81,7 @@ const Signup = () => {
             <Sparkles className="w-6 h-6 text-primary-foreground" />
           </div>
           <span className="font-display text-2xl font-bold text-foreground">
-            Toshan Event
+            AayushEventApp
           </span>
         </Link>
 

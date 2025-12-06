@@ -26,7 +26,7 @@ const Login = () => {
       setIsLoading(false);
       toast({
         title: "Login Successful",
-        description: "Welcome back to Toshan Event!",
+        description: "Welcome back to AayushEventApp!",
       });
       navigate("/dashboard");
     }, 1500);
@@ -47,7 +47,7 @@ const Login = () => {
             <Sparkles className="w-6 h-6 text-primary-foreground" />
           </div>
           <span className="font-display text-2xl font-bold text-foreground">
-            Toshan Event
+            AayushEventApp
           </span>
         </Link>
 
