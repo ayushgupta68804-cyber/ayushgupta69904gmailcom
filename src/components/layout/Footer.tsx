@@ -13,7 +13,7 @@ const Footer = () => {
                 <Sparkles className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-display text-xl font-semibold text-foreground">
-                Toshan Event
+                AayushEventApp
               </span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
@@ -86,7 +86,7 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-border">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2024 Toshan Event. All rights reserved.
+              © 2024 AayushEventApp. All rights reserved.
             </p>
             <div className="flex gap-6">
               <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

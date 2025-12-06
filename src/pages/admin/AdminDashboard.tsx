@@ -78,7 +78,7 @@ const AdminDashboard = () => {
             </div>
             <div>
               <span className="font-display text-lg font-semibold text-foreground block">
-                Toshan Event
+                AayushEventApp
               </span>
               <span className="text-xs text-muted-foreground">Owner Panel</span>
             </div>
