@@ -13,14 +13,19 @@ const Footer = () => {
                 <Sparkles className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-display text-xl font-semibold text-foreground">
-                AayushEventApp
+                The Dreamers Event
               </span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Crafting unforgettable moments with AI-powered event planning. From intimate gatherings to grand celebrations.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+              <a 
+                href="https://www.instagram.com/the_dreamers_events?igsh=aG5ncHYzYWI1ZGt1" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
                 <Instagram className="w-5 h-5" />
               </a>
               <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
@@ -67,17 +72,17 @@ const Footer = () => {
           <div className="space-y-4">
             <h4 className="font-display text-lg font-semibold text-foreground">Contact Us</h4>
             <div className="flex flex-col gap-3">
-              <a href="tel:+919876543210" className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a href="tel:+918766353710" className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors">
                 <Phone className="w-4 h-4 text-primary" />
-                +91 98765 43210
+                +91 87663 53710
               </a>
-              <a href="mailto:hello@toshanevent.com" className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a href="mailto:thedreamersevents1@gmail.com" className="flex items-center gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors">
                 <Mail className="w-4 h-4 text-primary" />
-                hello@toshanevent.com
+                thedreamersevents1@gmail.com
               </a>
               <div className="flex items-start gap-3 text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4 text-primary mt-0.5" />
-                Mumbai, Maharashtra, India
+                <span>Jaipur, Delhi NCR, Dehradun, Lucknow, Prayagraj & PAN India</span>
               </div>
             </div>
           </div>
@@ -86,7 +91,7 @@ const Footer = () => {
         <div className="mt-12 pt-8 border-t border-border">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2024 AayushEventApp. All rights reserved.
+              © 2024 The Dreamers Event. All rights reserved.
             </p>
             <div className="flex gap-6">
               <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">

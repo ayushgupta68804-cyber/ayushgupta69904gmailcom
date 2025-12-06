@@ -1,44 +1,86 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Sparkles, Plus, Calendar, Clock, MapPin, IndianRupee,
   MessageSquare, CheckCircle2, AlertCircle, User, LogOut, Bell
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data for demonstration
-const mockEvents = [
-  {
-    id: 1,
-    type: "Wedding",
-    date: "2024-03-15",
-    status: "pending_approval",
-    budget: "₹2,50,000",
-    location: "Mumbai, Maharashtra",
-    guestCount: 150,
-  },
-  {
-    id: 2,
-    type: "Birthday Party",
-    date: "2024-02-28",
-    status: "approved",
-    budget: "₹50,000",
-    location: "Pune, Maharashtra",
-    guestCount: 50,
-  },
-];
+interface EventRequest {
+  id: string;
+  event_type: string;
+  event_date: string;
+  status: string;
+  budget: number;
+  location: string;
+  guest_count: number;
+}
 
-const statusConfig = {
+const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
   pending_review: { label: "Under Review", color: "bg-amber-500/20 text-amber-500", icon: Clock },
-  pending_approval: { label: "Plan Ready", color: "bg-blue-500/20 text-blue-500", icon: AlertCircle },
+  ai_plans_ready: { label: "Plans Ready", color: "bg-blue-500/20 text-blue-500", icon: AlertCircle },
+  plan_sent: { label: "Plan Received", color: "bg-blue-500/20 text-blue-500", icon: AlertCircle },
   approved: { label: "Approved", color: "bg-green-500/20 text-green-500", icon: CheckCircle2 },
+  payment_pending: { label: "Payment Pending", color: "bg-amber-500/20 text-amber-500", icon: Clock },
+  confirmed: { label: "Confirmed", color: "bg-green-500/20 text-green-500", icon: CheckCircle2 },
+  in_progress: { label: "In Progress", color: "bg-blue-500/20 text-blue-500", icon: Clock },
   completed: { label: "Completed", color: "bg-primary/20 text-primary", icon: CheckCircle2 },
+  cancelled: { label: "Cancelled", color: "bg-red-500/20 text-red-500", icon: AlertCircle },
 };
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [events] = useState(mockEvents);
+  const { user, signOut, loading, isAdmin } = useAuth();
+  const [events, setEvents] = useState<EventRequest[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/auth/login");
+      return;
+    }
+
+    if (isAdmin) {
+      navigate("/admin");
+      return;
+    }
+
+    if (user) {
+      fetchEvents();
+    }
+  }, [user, loading, isAdmin, navigate]);
+
+  const fetchEvents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('event_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setEvents(data || []);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,7 +93,7 @@ const Dashboard = () => {
                 <Sparkles className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="font-display text-xl font-semibold text-foreground">
-                AayushEventApp
+                The Dreamers Event
               </span>
             </Link>
 
@@ -64,7 +106,10 @@ const Dashboard = () => {
                 <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center">
                   <User className="w-5 h-5 text-muted-foreground" />
                 </div>
-                <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+                <button 
+                  onClick={handleLogout}
+                  className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+                >
                   <LogOut className="w-5 h-5" />
                 </button>
               </div>
@@ -139,7 +184,11 @@ const Dashboard = () => {
               </Button>
             </div>
 
-            {events.length === 0 ? (
+            {loadingEvents ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : events.length === 0 ? (
               <Card variant="elevated" className="text-center py-16">
                 <CardContent>
                   <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -158,7 +207,7 @@ const Dashboard = () => {
             ) : (
               <div className="grid gap-4">
                 {events.map((event) => {
-                  const status = statusConfig[event.status as keyof typeof statusConfig];
+                  const status = statusConfig[event.status] || statusConfig.pending_review;
                   const StatusIcon = status.icon;
 
                   return (
@@ -175,12 +224,12 @@ const Dashboard = () => {
                             </div>
                             <div>
                               <h3 className="font-semibold text-foreground mb-1">
-                                {event.type}
+                                {event.event_type}
                               </h3>
                               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-4 h-4" />
-                                  {new Date(event.date).toLocaleDateString("en-IN", {
+                                  {new Date(event.event_date).toLocaleDateString("en-IN", {
                                     day: "numeric",
                                     month: "short",
                                     year: "numeric",
@@ -192,7 +241,7 @@ const Dashboard = () => {
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <IndianRupee className="w-4 h-4" />
-                                  {event.budget}
+                                  ₹{event.budget.toLocaleString()}
                                 </span>
                               </div>
                             </div>

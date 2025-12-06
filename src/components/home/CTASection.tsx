@@ -27,9 +27,11 @@ const CTASection = () => {
               Start Planning Now
               <ArrowRight className="w-5 h-5" />
             </Button>
-            <Button variant="outline" size="xl">
-              <Phone className="w-5 h-5" />
-              Call Us: +91 98765 43210
+            <Button variant="outline" size="xl" asChild>
+              <a href="tel:+918766353710">
+                <Phone className="w-5 h-5" />
+                Call Us: +91 87663 53710
+              </a>
             </Button>
           </div>
 

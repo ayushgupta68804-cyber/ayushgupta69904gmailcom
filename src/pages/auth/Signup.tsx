@@ -4,15 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Sparkles, User, Mail, Lock, Phone, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Sparkles, User, Mail, Lock, Phone, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { z } from "zod";
+
+const signupSchema = z.object({
+  fullName: z.string().min(2, "Full name must be at least 2 characters").max(100),
+  phone: z.string().min(10, "Please enter a valid phone number").max(15),
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [step, setStep] = useState<"details" | "otp">("details");
-  const [otp, setOtp] = useState("");
-  const [role, setRole] = useState<"customer" | "owner">("customer");
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -20,50 +27,54 @@ const Signup = () => {
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
-
-  const handleSendOTP = async () => {
-    if (!formData.phone) {
-      toast({
-        title: "Phone Required",
-        description: "Please enter your phone number to receive OTP",
-        variant: "destructive",
-      });
-      return;
-    }
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setStep("otp");
-      toast({
-        title: "OTP Sent",
-        description: "A verification code has been sent to your phone",
-      });
-    }, 1500);
-  };
-
-  const handleVerifyOTP = async () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Phone Verified",
-        description: "Your phone number has been verified successfully",
-      });
-    }, 1000);
-  };
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
+    
+    const result = signupSchema.safeParse(formData);
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {};
+      result.error.errors.forEach((err) => {
+        fieldErrors[err.path[0] as string] = err.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
+
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "Account Created",
-        description: "Welcome to AayushEventApp! Let's plan something amazing.",
-      });
-      navigate(role === "owner" ? "/admin" : "/dashboard");
-    }, 1500);
+    const { error } = await signUp(formData.email, formData.password, {
+      full_name: formData.fullName,
+      phone: formData.phone,
+    });
+    
+    setIsLoading(false);
+    
+    if (error) {
+      if (error.message.includes("already registered")) {
+        toast({
+          title: "Account Exists",
+          description: "This email is already registered. Please sign in instead.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Signup Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+      return;
+    }
+
+    toast({
+      title: "Account Created",
+      description: "Welcome to The Dreamers Event! Let's plan something amazing.",
+    });
+    
+    navigate("/dashboard");
   };
 
   return (
@@ -81,7 +92,7 @@ const Signup = () => {
             <Sparkles className="w-6 h-6 text-primary-foreground" />
           </div>
           <span className="font-display text-2xl font-bold text-foreground">
-            AayushEventApp
+            The Dreamers Event
           </span>
         </Link>
 
@@ -92,39 +103,6 @@ const Signup = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Role Selection */}
-              <div className="space-y-2">
-                <Label>Account Type</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setRole("customer")}
-                    className={`p-4 rounded-lg border text-center transition-all ${
-                      role === "customer"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    <User className="w-6 h-6 mx-auto mb-2" />
-                    <span className="text-sm font-medium">Customer</span>
-                    <p className="text-xs mt-1 opacity-70">Plan your events</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole("owner")}
-                    className={`p-4 rounded-lg border text-center transition-all ${
-                      role === "owner"
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-muted-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    <Sparkles className="w-6 h-6 mx-auto mb-2" />
-                    <span className="text-sm font-medium">Organizer</span>
-                    <p className="text-xs mt-1 opacity-70">Manage events</p>
-                  </button>
-                </div>
-              </div>
-
               {/* Full Name */}
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
@@ -140,58 +118,30 @@ const Signup = () => {
                     required
                   />
                 </div>
+                {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
               </div>
 
-              {/* Phone Number with OTP */}
+              {/* Phone Number */}
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number (Required)</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+91 98765 43210"
-                      className="pl-10"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="elegant"
-                    onClick={handleSendOTP}
-                    disabled={isLoading || step === "otp"}
-                  >
-                    {step === "otp" ? <CheckCircle2 className="w-4 h-4" /> : "Send OTP"}
-                  </Button>
+                <Label htmlFor="phone">Phone Number</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    className="pl-10"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    required
+                  />
                 </div>
+                {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
               </div>
 
-              {/* OTP Input */}
-              {step === "otp" && (
-                <div className="space-y-2 animate-fade-in">
-                  <Label htmlFor="otp">Enter OTP</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="otp"
-                      type="text"
-                      placeholder="Enter 6-digit OTP"
-                      maxLength={6}
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                    />
-                    <Button type="button" variant="outline" onClick={handleVerifyOTP}>
-                      Verify
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Email (Optional) */}
+              {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email">Email (Optional)</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
@@ -201,8 +151,10 @@ const Signup = () => {
                     className="pl-10"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
                   />
                 </div>
+                {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
               </div>
 
               {/* Password */}
@@ -227,6 +179,7 @@ const Signup = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
               </div>
 
               <Button type="submit" variant="gold" className="w-full" size="lg" disabled={isLoading}>
