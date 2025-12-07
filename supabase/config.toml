@@ -1,1 +1,7 @@
 project_id = "txcqmiglgnemldrdbmef"
+
+[functions.generate-ai-plans]
+verify_jwt = true
+
+[functions.send-notification]
+verify_jwt = true
