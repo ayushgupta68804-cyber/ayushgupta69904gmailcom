@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -10,9 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Heart, PartyPopper, Building2, Gift, Music, Mic2,
   Calendar, Users, MapPin, IndianRupee, Sun, Moon,
-  Home, TreePine, Sparkles, Upload, Mic, ArrowRight
+  Home, TreePine, Sparkles, Upload, Mic, ArrowRight, X, Loader2
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const eventTypes = [
   { id: "wedding", label: "Wedding", icon: Heart },
@@ -25,7 +27,12 @@ const eventTypes = [
 
 const EventRequest = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     eventType: "",
     budget: "",
@@ -39,18 +46,161 @@ const EventRequest = () => {
     notes: "",
   });
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !user) return;
+    
+    setUploadingImages(true);
+    const files = Array.from(e.target.files);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('event-images')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error("Upload error:", uploadError);
+          continue;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('event-images')
+          .getPublicUrl(fileName);
+
+        uploadedUrls.push(publicUrl);
+      }
+
+      setReferenceImages(prev => [...prev, ...uploadedUrls]);
+      toast({
+        title: "Images Uploaded",
+        description: `${uploadedUrls.length} image(s) uploaded successfully`,
+      });
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload some images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setReferenceImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login to submit an event request.",
+        variant: "destructive",
+      });
+      navigate("/auth/login");
+      return;
+    }
+
+    if (!formData.eventType) {
+      toast({
+        title: "Event Type Required",
+        description: "Please select an event type.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      // Parse budget - extract numeric value
+      const budgetValue = parseFloat(formData.budget.replace(/[^0-9.]/g, '')) || 0;
+      const guestCountValue = parseInt(formData.guestCount) || 0;
+
+      // Insert event request
+      const { data: eventRequest, error: insertError } = await supabase
+        .from('event_requests')
+        .insert({
+          user_id: user.id,
+          event_type: formData.eventType,
+          budget: budgetValue,
+          guest_count: guestCountValue,
+          event_date: formData.eventDate,
+          event_time: formData.eventTime || null,
+          location: formData.location,
+          venue_type: formData.venueType,
+          time_of_day: formData.timeOfDay,
+          event_scale: formData.eventScale,
+          reference_images: referenceImages.length > 0 ? referenceImages : null,
+          status: 'pending_review',
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // Send notification
+      try {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            type: 'booking_confirmation',
+            email: user.email,
+            userName: user.user_metadata?.full_name || 'Valued Customer',
+            eventType: formData.eventType,
+            eventDate: formData.eventDate,
+          },
+        });
+      } catch (notifError) {
+        console.log("Notification skipped:", notifError);
+      }
+
+      // Trigger AI plan generation
+      try {
+        const { error: aiError } = await supabase.functions.invoke('generate-ai-plans', {
+          body: {
+            eventRequestId: eventRequest.id,
+            eventType: formData.eventType,
+            budget: budgetValue,
+            guestCount: guestCountValue,
+            venueType: formData.venueType,
+            timeOfDay: formData.timeOfDay,
+            eventScale: formData.eventScale,
+            location: formData.location,
+          },
+        });
+
+        if (aiError) {
+          console.log("AI generation will be done by admin:", aiError);
+        }
+      } catch (aiError) {
+        console.log("AI plan generation queued for admin review");
+      }
+
       toast({
-        title: "Request Submitted!",
-        description: "Our organizer will contact you shortly with personalized plans.",
+        title: "Request Submitted Successfully!",
+        description: "Our organizer will review your request and contact you shortly with personalized plans.",
       });
+
       navigate("/dashboard");
-    }, 2000);
+    } catch (error: any) {
+      console.error("Error submitting request:", error);
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Failed to submit your request. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -113,11 +263,12 @@ const EventRequest = () => {
                 <CardContent>
                   <Input
                     type="text"
-                    placeholder="e.g., ₹50,000 - ₹1,00,000"
+                    placeholder="e.g., 50000 or 100000"
                     value={formData.budget}
                     onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
                     required
                   />
+                  <p className="text-xs text-muted-foreground mt-2">Enter amount in INR</p>
                 </CardContent>
               </Card>
 
@@ -135,6 +286,7 @@ const EventRequest = () => {
                     value={formData.guestCount}
                     onChange={(e) => setFormData({ ...formData, guestCount: e.target.value })}
                     required
+                    min="1"
                   />
                 </CardContent>
               </Card>
@@ -155,6 +307,7 @@ const EventRequest = () => {
                     value={formData.eventDate}
                     onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
                     required
+                    min={new Date().toISOString().split('T')[0]}
                   />
                 </CardContent>
               </Card>
@@ -171,7 +324,6 @@ const EventRequest = () => {
                     type="time"
                     value={formData.eventTime}
                     onChange={(e) => setFormData({ ...formData, eventTime: e.target.value })}
-                    required
                   />
                 </CardContent>
               </Card>
@@ -309,17 +461,53 @@ const EventRequest = () => {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
                 
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Upload Reference Images</p>
+                {/* Image Upload */}
+                <div className="space-y-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
+                  >
+                    {uploadingImages ? (
+                      <Loader2 className="w-8 h-8 text-primary mx-auto mb-2 animate-spin" />
+                    ) : (
+                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {uploadingImages ? "Uploading..." : "Upload Reference Images"}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 10MB</p>
                   </div>
-                  <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                    <Mic className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Record Voice Note</p>
-                    <p className="text-xs text-muted-foreground mt-1">Describe your vision verbally</p>
-                  </div>
+
+                  {/* Preview uploaded images */}
+                  {referenceImages.length > 0 && (
+                    <div className="grid grid-cols-4 gap-4">
+                      {referenceImages.map((url, index) => (
+                        <div key={index} className="relative group">
+                          <img 
+                            src={url} 
+                            alt={`Reference ${index + 1}`} 
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute top-1 right-1 p-1 bg-destructive rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-4 h-4 text-destructive-foreground" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -332,8 +520,17 @@ const EventRequest = () => {
               className="w-full"
               disabled={isSubmitting || !formData.eventType}
             >
-              {isSubmitting ? "Sending Request..." : "Send Request to Organizer"}
-              <ArrowRight className="w-5 h-5" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Sending Request...
+                </>
+              ) : (
+                <>
+                  Send Request to Organizer
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
             </Button>
           </form>
         </div>
