@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sparkles, Mail, Lock, Eye, EyeOff, Shield, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
@@ -16,14 +17,29 @@ const loginSchema = z.object({
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, isAdmin } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { signIn, isAdmin, user, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [loginType, setLoginType] = useState<"user" | "admin">(
+    searchParams.get("type") === "admin" ? "admin" : "user"
+  );
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      if (isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    }
+  }, [user, isAdmin, loading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,9 +60,8 @@ const Login = () => {
 
     const { error } = await signIn(formData.email, formData.password);
     
-    setIsLoading(false);
-    
     if (error) {
+      setIsLoading(false);
       toast({
         title: "Login Failed",
         description: error.message === "Invalid login credentials" 
@@ -62,11 +77,20 @@ const Login = () => {
       description: "Welcome back to The Dreamers Event!",
     });
     
-    // Navigation will be handled by checking isAdmin after auth state updates
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 500);
+    // Wait for auth state to update and check role
+    setTimeout(async () => {
+      setIsLoading(false);
+      // The useEffect will handle the redirect based on isAdmin state
+    }, 1000);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -88,11 +112,33 @@ const Login = () => {
         </Link>
 
         <Card variant="elevated" className="backdrop-blur-sm">
-          <CardHeader className="text-center">
+          <CardHeader className="text-center pb-2">
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>Sign in to continue planning amazing events</CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Login Type Tabs */}
+            <Tabs value={loginType} onValueChange={(v) => setLoginType(v as "user" | "admin")} className="mb-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="user" className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  User Login
+                </TabsTrigger>
+                <TabsTrigger value="admin" className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Admin Login
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            {loginType === "admin" && (
+              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                  Admin access only. Unauthorized access is prohibited.
+                </p>
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
@@ -140,17 +186,25 @@ const Login = () => {
                 {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
               </div>
 
-              <Button type="submit" variant="gold" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading ? "Signing in..." : "Sign In"}
+              <Button 
+                type="submit" 
+                variant={loginType === "admin" ? "default" : "gold"} 
+                className="w-full" 
+                size="lg" 
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : loginType === "admin" ? "Sign In as Admin" : "Sign In"}
               </Button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/auth/signup" className="text-primary font-medium hover:underline">
-                Create Account
-              </Link>
-            </div>
+            {loginType === "user" && (
+              <div className="mt-6 text-center text-sm text-muted-foreground">
+                Don't have an account?{" "}
+                <Link to="/auth/signup" className="text-primary font-medium hover:underline">
+                  Create Account
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -80,10 +80,15 @@ const Footer = () => {
                 <Mail className="w-4 h-4 text-primary" />
                 thedreamersevents1@gmail.com
               </a>
-              <div className="flex items-start gap-3 text-sm text-muted-foreground">
+              <a 
+                href="https://www.google.com/maps/search/?api=1&query=Jaipur+Delhi+NCR+Dehradun+Lucknow+Prayagraj+India"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
                 <MapPin className="w-4 h-4 text-primary mt-0.5" />
-                <span>Jaipur, Delhi NCR, Dehradun, Lucknow, Prayagraj & PAN India</span>
-              </div>
+                <span className="hover:underline">Jaipur, Delhi NCR, Dehradun, Lucknow, Prayagraj & PAN India</span>
+              </a>
             </div>
           </div>
         </div>
