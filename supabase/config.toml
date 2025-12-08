@@ -5,3 +5,15 @@ verify_jwt = true
 
 [functions.send-notification]
 verify_jwt = true
+
+[functions.create-razorpay-order]
+verify_jwt = true
+
+[functions.razorpay-webhook]
+verify_jwt = false
+
+[functions.generate-invoice]
+verify_jwt = false
+
+[functions.send-email]
+verify_jwt = false
