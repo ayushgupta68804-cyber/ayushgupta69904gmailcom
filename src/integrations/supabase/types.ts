@@ -351,6 +351,7 @@ export type Database = {
           created_at: string
           event_request_id: string
           id: string
+          invoice_url: string | null
           notes: string | null
           paid_at: string | null
           payment_gateway: string | null
@@ -365,6 +366,7 @@ export type Database = {
           created_at?: string
           event_request_id: string
           id?: string
+          invoice_url?: string | null
           notes?: string | null
           paid_at?: string | null
           payment_gateway?: string | null
@@ -379,6 +381,7 @@ export type Database = {
           created_at?: string
           event_request_id?: string
           id?: string
+          invoice_url?: string | null
           notes?: string | null
           paid_at?: string | null
           payment_gateway?: string | null
