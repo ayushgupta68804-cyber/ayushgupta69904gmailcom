@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Sparkles, User, Mail, Lock, Phone, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
 const signupSchema = z.object({
@@ -18,7 +18,6 @@ const signupSchema = z.object({
 
 const Signup = () => {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
@@ -45,36 +44,50 @@ const Signup = () => {
 
     setIsLoading(true);
 
-    const { error } = await signUp(formData.email, formData.password, {
-      full_name: formData.fullName,
-      phone: formData.phone,
-    });
-    
-    setIsLoading(false);
-    
-    if (error) {
-      if (error.message.includes("already registered")) {
-        toast({
-          title: "Account Exists",
-          description: "This email is already registered. Please sign in instead.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Signup Failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-      return;
-    }
+    try {
+      // Send OTP to phone number
+      const { data, error } = await supabase.functions.invoke("send-otp", {
+        body: {
+          phone: formData.phone,
+          email: formData.email,
+          type: "signup",
+        },
+      });
 
-    toast({
-      title: "Account Created",
-      description: "Welcome to The Dreamers Event! Let's plan something amazing.",
-    });
-    
-    navigate("/dashboard");
+      if (error || data?.error) {
+        toast({
+          title: "Failed to send OTP",
+          description: data?.error || error?.message || "Please try again",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      toast({
+        title: "OTP Sent",
+        description: "Please verify your phone number to complete registration",
+      });
+
+      // Navigate to OTP verification page with form data
+      navigate("/auth/verify-otp", {
+        state: {
+          phone: formData.phone,
+          email: formData.email,
+          password: formData.password,
+          fullName: formData.fullName,
+          type: "signup",
+        },
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Something went wrong",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -137,6 +150,7 @@ const Signup = () => {
                   />
                 </div>
                 {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
+                <p className="text-xs text-muted-foreground">OTP will be sent to this number</p>
               </div>
 
               {/* Email */}
@@ -183,7 +197,7 @@ const Signup = () => {
               </div>
 
               <Button type="submit" variant="gold" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading ? "Creating Account..." : "Create Account"}
+                {isLoading ? "Sending OTP..." : "Continue with OTP"}
               </Button>
             </form>
 

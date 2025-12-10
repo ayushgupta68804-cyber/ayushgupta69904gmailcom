@@ -345,6 +345,42 @@ export type Database = {
           },
         ]
       }
+      otp_verifications: {
+        Row: {
+          attempts: number
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          otp_code: string
+          phone: string
+          type: string
+          verified: boolean
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          email?: string | null
+          expires_at: string
+          id?: string
+          otp_code: string
+          phone: string
+          type: string
+          verified?: boolean
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          otp_code?: string
+          phone?: string
+          type?: string
+          verified?: boolean
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
