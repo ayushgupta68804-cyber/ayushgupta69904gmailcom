@@ -11,6 +11,9 @@ import wedding2 from "@/assets/gallery/wedding-2.png";
 import wedding3 from "@/assets/gallery/wedding-3.png";
 import weddingCocktail1 from "@/assets/gallery/wedding-cocktail-1.png";
 import weddingCocktail2 from "@/assets/gallery/wedding-cocktail-2.png";
+import weddingHaldi1 from "@/assets/gallery/wedding-haldi-1.png";
+import weddingHaldi2 from "@/assets/gallery/wedding-haldi-2.png";
+import weddingHaldi3 from "@/assets/gallery/wedding-haldi-3.png";
 
 // Corporate images
 import corporate1 from "@/assets/gallery/corporate-1.png";
@@ -43,6 +46,9 @@ const galleryData: GalleryCategory[] = [
       { id: "w3", src: wedding3, title: "Sagai & Sangeet", description: "Engagement ceremony at Saharanpur" },
       { id: "w4", src: weddingCocktail1, title: "Cocktail Night", description: "Elegant venue with chandeliers" },
       { id: "w5", src: weddingCocktail2, title: "Cocktail Night", description: "Live performance & stage setup" },
+      { id: "w6", src: weddingHaldi1, title: "Haldi Ceremony", description: "Traditional decor with marigolds" },
+      { id: "w7", src: weddingHaldi2, title: "Haldi Ceremony", description: "Poolside art installations" },
+      { id: "w8", src: weddingHaldi3, title: "Haldi Ceremony", description: "Fun signage & photo props" },
     ],
   },
   {
