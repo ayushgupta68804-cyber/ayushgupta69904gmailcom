@@ -9,6 +9,8 @@ import { motion } from "framer-motion";
 import wedding1 from "@/assets/gallery/wedding-1.png";
 import wedding2 from "@/assets/gallery/wedding-2.png";
 import wedding3 from "@/assets/gallery/wedding-3.png";
+import weddingCocktail1 from "@/assets/gallery/wedding-cocktail-1.png";
+import weddingCocktail2 from "@/assets/gallery/wedding-cocktail-2.png";
 
 // Corporate images
 import corporate1 from "@/assets/gallery/corporate-1.png";
@@ -39,6 +41,8 @@ const galleryData: GalleryCategory[] = [
       { id: "w1", src: wedding1, title: "Groom's Family Performance", description: "Sangeet night celebration" },
       { id: "w2", src: wedding2, title: "Groom & Bride Entry", description: "Grand wedding entrance" },
       { id: "w3", src: wedding3, title: "Sagai & Sangeet", description: "Engagement ceremony at Saharanpur" },
+      { id: "w4", src: weddingCocktail1, title: "Cocktail Night", description: "Elegant venue with chandeliers" },
+      { id: "w5", src: weddingCocktail2, title: "Cocktail Night", description: "Live performance & stage setup" },
     ],
   },
   {
