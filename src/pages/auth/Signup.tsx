@@ -45,40 +45,52 @@ const Signup = () => {
     setIsLoading(true);
 
     try {
-      // Send OTP to phone number
-      const { data, error } = await supabase.functions.invoke("send-otp", {
-        body: {
-          phone: formData.phone,
-          email: formData.email,
-          type: "signup",
+      // Clean phone number
+      let cleanPhone = formData.phone.replace(/[\s\-\(\)]/g, "");
+      if (!cleanPhone.startsWith("+")) {
+        cleanPhone = cleanPhone.startsWith("91") ? `+${cleanPhone}` : `+91${cleanPhone}`;
+      }
+
+      const redirectUrl = `${window.location.origin}/`;
+
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: formData.fullName,
+            phone: cleanPhone,
+          },
         },
       });
 
-      if (error || data?.error) {
+      if (error) {
         toast({
-          title: "Failed to send OTP",
-          description: data?.error || error?.message || "Please try again",
+          title: "Signup Failed",
+          description: error.message,
           variant: "destructive",
         });
         setIsLoading(false);
         return;
       }
 
+      // Create profile
+      if (data.user) {
+        await supabase.from("profiles").insert({
+          id: data.user.id,
+          full_name: formData.fullName,
+          phone: cleanPhone,
+          email: formData.email,
+        });
+      }
+
       toast({
-        title: "OTP Sent",
-        description: "Please verify your phone number to complete registration",
+        title: "Account Created!",
+        description: "Welcome to The Dreamers Event!",
       });
 
-      // Navigate to OTP verification page with form data
-      navigate("/auth/verify-otp", {
-        state: {
-          phone: formData.phone,
-          email: formData.email,
-          password: formData.password,
-          fullName: formData.fullName,
-          type: "signup",
-        },
-      });
+      navigate("/dashboard");
     } catch (err: any) {
       toast({
         title: "Error",
@@ -150,7 +162,6 @@ const Signup = () => {
                   />
                 </div>
                 {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
-                <p className="text-xs text-muted-foreground">OTP will be sent to this number</p>
               </div>
 
               {/* Email */}
@@ -197,7 +208,7 @@ const Signup = () => {
               </div>
 
               <Button type="submit" variant="gold" className="w-full" size="lg" disabled={isLoading}>
-                {isLoading ? "Sending OTP..." : "Continue with OTP"}
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </form>
 
