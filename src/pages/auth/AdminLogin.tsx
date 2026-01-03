@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Sparkles, Phone, Mail, Lock, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
+import { Sparkles, Mail, Lock, Eye, EyeOff, Shield, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,12 +19,10 @@ const AdminLogin = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [step, setStep] = useState<"credentials" | "otp">("credentials");
   const [formData, setFormData] = useState({
     identifier: "",
     password: "",
   });
-  const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -35,7 +33,7 @@ const AdminLogin = () => {
     }
   }, [user, isAdmin, loading, navigate]);
 
-  const handleCredentialsSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
@@ -67,78 +65,20 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      // Send OTP to admin phone
-      const { data, error } = await supabase.functions.invoke("send-otp", {
-        body: {
-          phone: "8766353710",
-          email: "ankushgupta26507@gmail.com",
-          type: "admin_login",
-        },
+      // Sign in with admin email
+      const { error } = await supabase.auth.signInWithPassword({
+        email: "ankushgupta26507@gmail.com",
+        password: formData.password,
       });
 
-      if (error || data?.error) {
+      if (error) {
         toast({
-          title: "Failed to send OTP",
-          description: data?.error || error?.message,
+          title: "Login Failed",
+          description: error.message,
           variant: "destructive",
         });
         setIsLoading(false);
         return;
-      }
-
-      toast({
-        title: "OTP Sent",
-        description: "An OTP has been sent to the admin phone number",
-      });
-      setStep("otp");
-    } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to send OTP",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleOTPVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (otp.length !== 6) {
-      toast({
-        title: "Invalid OTP",
-        description: "Please enter the complete 6-digit OTP",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("verify-otp", {
-        body: {
-          phone: "8766353710",
-          otp,
-          type: "admin_login",
-          password: formData.password,
-        },
-      });
-
-      if (error || data?.error) {
-        toast({
-          title: "Verification Failed",
-          description: data?.error || error?.message || "Invalid OTP",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Set session if returned
-      if (data.session) {
-        await supabase.auth.setSession(data.session);
       }
 
       toast({
@@ -150,7 +90,7 @@ const AdminLogin = () => {
     } catch (err: any) {
       toast({
         title: "Error",
-        description: err.message || "Failed to verify OTP",
+        description: err.message || "Failed to login",
         variant: "destructive",
       });
     } finally {
@@ -189,12 +129,7 @@ const AdminLogin = () => {
               <Shield className="w-8 h-8 text-destructive" />
             </div>
             <CardTitle className="text-2xl">Admin Access</CardTitle>
-            <CardDescription>
-              {step === "credentials" 
-                ? "Enter your admin credentials to continue"
-                : "Enter the OTP sent to admin phone"
-              }
-            </CardDescription>
+            <CardDescription>Enter your admin credentials to continue</CardDescription>
           </CardHeader>
           <CardContent>
             {/* Warning Banner */}
@@ -205,94 +140,57 @@ const AdminLogin = () => {
               </p>
             </div>
 
-            {step === "credentials" ? (
-              <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="identifier">Phone Number or Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="identifier"
-                      type="text"
-                      placeholder="Admin phone or email"
-                      className="pl-10"
-                      value={formData.identifier}
-                      onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
-                      required
-                    />
-                  </div>
-                  {errors.identifier && <p className="text-sm text-destructive">{errors.identifier}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter admin password"
-                      className="pl-10 pr-10"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-destructive hover:bg-destructive/90"
-                  size="lg"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Verifying..." : "Continue to OTP"}
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleOTPVerify} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="otp">Enter 6-digit OTP</Label>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="identifier">Phone Number or Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
-                    id="otp"
+                    id="identifier"
                     type="text"
-                    inputMode="numeric"
-                    maxLength={6}
-                    placeholder="000000"
-                    className="text-center text-2xl tracking-[0.5em] font-mono"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="Admin phone or email"
+                    className="pl-10"
+                    value={formData.identifier}
+                    onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
                     required
                   />
                 </div>
+                {errors.identifier && <p className="text-sm text-destructive">{errors.identifier}</p>}
+              </div>
 
-                <Button
-                  type="submit"
-                  className="w-full bg-destructive hover:bg-destructive/90"
-                  size="lg"
-                  disabled={isLoading || otp.length !== 6}
-                >
-                  {isLoading ? "Verifying..." : "Verify & Login"}
-                </Button>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter admin password"
+                    className="pl-10 pr-10"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+              </div>
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setStep("credentials")}
-                >
-                  Back to Credentials
-                </Button>
-              </form>
-            )}
+              <Button
+                type="submit"
+                className="w-full bg-destructive hover:bg-destructive/90"
+                size="lg"
+                disabled={isLoading}
+              >
+                {isLoading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
 
             <div className="mt-6 text-center text-sm text-muted-foreground">
               <Link to="/auth/login" className="text-primary font-medium hover:underline">
